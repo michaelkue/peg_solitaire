@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 import 'package:peg_solitaire/board.dart';
+import 'package:peg_solitaire/fading_peg.dart';
 import 'package:peg_solitaire/finished-dialog.dart';
 import 'package:peg_solitaire/hole-config.dart';
 import 'package:peg_solitaire/game_reducer.dart';
 import 'package:peg_solitaire/game_state.dart';
+import 'package:peg_solitaire/moving_peg.dart';
 import 'package:peg_solitaire/pegs.dart';
 
 class BoardSetting extends StatefulWidget {
@@ -92,6 +95,23 @@ class BoardSettingState extends State<BoardSetting> {
         onTap: _onTapPeg,
       ),
     ];
+    if (_gameState.movingPegState.isActive) {
+      board.add(MovingPeg(
+        size: posSize,
+        begin: _holesConfig[_gameState.movingPegState.idxStart].point,
+        end: _holesConfig[_gameState.movingPegState.idxEnd].point,
+        onFinished: _onMoveFinished,
+      ));
+    }
+    if (_gameState.removingPegState.isActive) {
+      Point<double> position =
+          _holesConfig[_gameState.removingPegState.idxRemove].point;
+      board.add(FadingPeg(
+        size: posSize,
+        position: position,
+        onFinished: _onRemoveFinished,
+      ));
+    }
     return board;
   }
 
@@ -108,6 +128,18 @@ class BoardSettingState extends State<BoardSetting> {
   void _onTapHole(int idx) {
     setState(() {
       _gameState = _gameReducer.onTapHole(idx);
+    });
+  }
+
+  void _onMoveFinished() {
+    setState(() {
+      _gameState = _gameReducer.onFinishMove();
+    });
+  }
+
+  void _onRemoveFinished() {
+    setState(() {
+      _gameState = _gameReducer.onFinishRemove();
     });
     if (_gameState.isGameFinished) {
       FinishedDialog(

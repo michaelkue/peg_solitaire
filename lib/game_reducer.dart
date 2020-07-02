@@ -44,25 +44,55 @@ class GameReducer {
     return this.gameState;
   }
 
-  /// derives new game state from user action (tap hole)
-  /// - removes selected peg and jumped peg;
-  /// - puts peg onto the target hole;
-  /// - remove selected peg and holes  to o from game state;
+  /// starts peg move
   onTapHole(int idx) {
     if (this.gameState.holesToGo.contains(idx)) {
       var pegStates = List<PegState>.from(this.gameState.pegStates);
       pegStates.removeWhere((s) => s.idx == this.gameState.selectedPeg);
-      pegStates.add(PegState(
-        idx: idx,
-      ));
-      var idxRemove = _getJumpedHole(this.gameState.selectedPeg, idx);
-      pegStates.removeWhere((s) => s.idx == idxRemove);
-      var newPegStates = _initPegStates(pegStates.map((s) => s.idx).toList());
       this.gameState = GameState(
-        pegStates: newPegStates,
-        isGameFinished: newPegStates.where((state) => state.isMovable).isEmpty,
+        pegStates: pegStates.map((s) => PegState(idx: s.idx)).toList(),
+        movingPegState: MovingPegState(
+          isActive: true,
+          idxStart: this.gameState.selectedPeg,
+          idxEnd: idx,
+        ),
       );
     }
+    return this.gameState;
+  }
+
+  /// derives new game state from user action (tap hole)
+  /// - removes selected peg and jumped peg;
+  /// - puts peg onto the target hole;
+  /// - remove selected peg and holes  to o from game state;
+  onFinishMove() {
+    // finally place the moved peg onto its new hole
+    var pegStates = List<PegState>.from(this.gameState.pegStates);
+    pegStates.add(PegState(
+      idx: this.gameState.movingPegState.idxEnd,
+    ));
+    // after move, remove the jumped peg
+    var idxRemove = _getJumpedHole(
+        this.gameState.movingPegState.idxStart, this.gameState.movingPegState.idxEnd);
+    pegStates.removeWhere((s) => s.idx == idxRemove);
+    this.gameState = GameState(
+      pegStates: pegStates,
+      movingPegState: MovingPegState(),
+      removingPegState: RemovingPegState(
+        isActive: true,
+        idxRemove: idxRemove,
+      ),
+    );
+    return this.gameState;
+  }
+
+  onFinishRemove() {
+//    var pegStates = _proceedPegStates(oldPegStates: this.gameState.pegStates);
+    var newPegStates = _initPegStates(this.gameState.pegStates.map((s) => s.idx).toList());
+    this.gameState = GameState(
+      pegStates: newPegStates,
+      isGameFinished: newPegStates.where((state) => state.isMovable).isEmpty,
+    );
     return this.gameState;
   }
 
